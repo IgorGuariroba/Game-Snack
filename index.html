@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snake Game</title>
+    <link href="https://fonts.googleapis.com/css?family=Antic+Slab" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div id="score">0</div>
+<canvas id="gameCanvas" width="300" height="300"></canvas>
+
+<style>
+    #gameCanvas {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    #score {
+        text-align: center;
+        font-size: 140px;
+        font-family: 'Antic Slab', serif;
+    }
+</style>
+</body>
+
+<script>
+    const GAME_SPEED = 100;
+    const CANVAS_BORDER_COLOUR = 'black';
+    const CANVAS_BACKGROUND_COLOUR = "white";
+    const SNAKE_COLOUR = 'lightgreen';
+    const SNAKE_BORDER_COLOUR = 'darkgreen';
+    const FOOD_COLOUR = 'red';
+    const FOOD_BORDER_COLOUR = 'darkred';
+
+    let snake = [
+        {x: 150, y: 150},
+        {x: 140, y: 150},
+        {x: 130, y: 150},
+        {x: 120, y: 150},
+        {x: 110, y: 150}
+    ]
+
+    // A pontuação do usuário
+    let score = 0;
+    //Quando definida como verdadeira, a cobra está mudando de direção
+    let changingDirection = false;
+    // Coordenada x de alimentos
+    let foodX;
+    // Alimentos y-ordinário
+    let foodY;
+    // Velocidade horizontal
+    let dx = 10;
+    // Velocidade vertical
+    let dy = 0;
+
+    //Obter o elemento da tela
+    const gameCanvas = document.getElementById("gameCanvas");
+    // Retornar um contexto de desenho bidimensional
+    const ctx = gameCanvas.getContext("2d");
+
+    // Começar o jogo
+    main();
+    // Crie o primeiro local de comida
+    createFood();
+    // Chame changeDirection sempre que uma tecla for pressionada
+    document.addEventListener("keydown", changeDirection);
+
+
+    /**
+     * Função principal do jogo
+     * chamou repetidamente para avançar no jogo
+     */
+    function main() {
+        // Se o jogo terminar, volte cedo para parar o jogo
+        if (didGameEnd()) return;
+
+        setTimeout(function onTick() {
+            changingDirection = false;
+            clearCanvas();
+            drawFood();
+            advanceSnake();
+            drawSnake();
+
+            // Chamar jogo novamente
+            main();
+        }, GAME_SPEED)
+    }
+
+    /**
+     * Altere a cor do plano de fundo da tela para CANVAS_BACKGROUND_COLOUR e
+     * desenhe uma borda ao redor
+     */
+    function clearCanvas() {
+        //  Selecione a cor para preencher o desenho
+        ctx.fillStyle = CANVAS_BACKGROUND_COLOUR;
+        //  Selecione a cor para a borda da tela
+        ctx.strokestyle = CANVAS_BORDER_COLOUR;
+
+        // Desenhe um retângulo "preenchido" para cobrir toda a tela
+        ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+        // Desenhe uma "borda" ao redor da tela inteira
+        ctx.strokeRect(0, 0, gameCanvas.width, gameCanvas.height);
+    }
+
+    /**
+     * Desenhe a comida na tela
+     */
+    function drawFood() {
+        ctx.fillStyle = FOOD_COLOUR;
+        ctx.strokestyle = FOOD_BORDER_COLOUR;
+        ctx.fillRect(foodX, foodY, 10, 10);
+        ctx.strokeRect(foodX, foodY, 10, 10);
+    }
+
+    /**
+     *Avança a cobra alterando as coordenadas x de suas partes
+     * de acordo com a velocidade horizontal e as coordenadas y de suas partes
+     * de acordo com a veolocidade vertical
+     */
+    function advanceSnake() {
+        // Crie a nova cabeça da cobra
+        const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+        // Adicione a nova cabeça ao início do corpo da cobra
+        snake.unshift(head);
+
+        const didEatFood = snake[0].x === foodX && snake[0].y === foodY;
+        if (didEatFood) {
+            // Aumentar pontuação
+            score += 10;
+            // Exibir pontuação na tela
+            document.getElementById('score').innerHTML = score;
+
+            // Gerar nova localização de alimentos
+            createFood();
+        } else {
+            // Remova a última parte do corpo da cobra
+            snake.pop();
+        }
+    }
+
+    /**
+     * Retorna verdadeiro se a cabeça da cobra tocar outra parte do jogo
+     * ou qualquer uma das paredes
+     */
+    function didGameEnd() {
+        for (let i = 4; i < snake.length; i++) {
+            if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true
+        }
+
+        const hitLeftWall = snake[0].x < 0;
+        const hitRightWall = snake[0].x > gameCanvas.width - 10;
+        const hitToptWall = snake[0].y < 0;
+        const hitBottomWall = snake[0].y > gameCanvas.height - 10;
+
+        return hitLeftWall || hitRightWall || hitToptWall || hitBottomWall
+    }
+
+    /**
+     * Gera um número aleatório que é múltiplo de 10, dado um mínimo
+     * e um número máximo
+     * @param {number} min - O número mínimo que o número aleatório pode ser
+     * @param {number} max - O número máximo que o número aleatório pode ser
+     */
+    function randomTen(min, max) {
+        return Math.round((Math.random() * (max-min) + min) / 10) * 10;
+    }
+
+    /**
+     *Cria um conjunto aleatório de coordenadas para o alimento da cobra.
+     */
+    function createFood() {
+        // Gere um número aleatório a coordenada x do alimento
+        foodX = randomTen(0, gameCanvas.width - 10);
+        // Gere um número aleatório para a coordenada y do alimento
+        foodY = randomTen(0, gameCanvas.height - 10);
+
+        //se o novo local de comida é o local onde a cobra está atualmente, gere um novo local de comida
+        snake.forEach(function isFoodOnSnake(part) {
+            const foodIsoNsnake = part.x == foodX && part.y == foodY;
+            if (foodIsoNsnake) createFood();
+        });
+    }
+
+    /**
+     * Desenha a cobra na tela
+     */
+    function drawSnake() {
+        // percorrer as partes da cobra desenhando cada parte na tela
+        snake.forEach(drawSnakePart)
+    }
+
+    /**
+     *Desenha uma parte da cobra na tela
+     * @param {object} snakePart - As coordenadas onde a peça deve ser desenhada
+     */
+    function drawSnakePart(snakePart) {
+        // Defina a cor da parte da cobra
+        ctx.fillStyle = SNAKE_COLOUR;
+
+        // Defina a cor da borda da parte da cobra
+        ctx.strokestyle = SNAKE_BORDER_COLOUR;
+
+        // Desenhe um retângulo "preenchido" para representar a parte da cobra nas coordenadas
+        // a peça está localizada
+        ctx.fillRect(snakePart.x, snakePart.y, 10, 10);
+
+        // Desenhe uma borda ao redor da parte da cobra
+        ctx.strokeRect(snakePart.x, snakePart.y, 10, 10);
+    }
+
+    /**
+    * Altera a velocidade vertical e horizontal da cobra de acordo com o
+    * tecla que foi pressionada.
+    * A direção não pode ser alterada para a direção oposta, para evitar que a cobra
+    * de reversão
+    * Por exemplo, se a direção for 'direita', ela não poderá se tornar 'esquerda'
+    * @param {object} event - O evento de pressionamento de tecla
+    */
+    function changeDirection(event) {
+        const LEFT_KEY = 37;
+        const RIGHT_KEY = 39;
+        const UP_KEY = 38;
+        const DOWN_KEY = 40;
+        /**
+        * Impedir que a cobra se inverta
+        * Cenário de exemplo:
+            * Cobra está se movendo para a direita. O usuário pressiona e imediatamente sai
+        * e a cobra muda imediatamente de direção sem dar um primeiro passo para baixo
+        */
+        if (changingDirection) return;
+        changingDirection = true;
+
+        const keyPressed = event.keyCode;
+
+        const goingUp = dy === -10;
+        const goingDown = dy === 10;
+        const goingRight = dx === 10;
+        const goingLeft = dx === -10;
+
+        if (keyPressed === LEFT_KEY && !goingRight) {
+            dx = -10;
+            dy = 0;
+        }
+        if (keyPressed === UP_KEY && !goingDown) {
+            dx = 0;
+            dy = -10;
+        }
+        if (keyPressed === RIGHT_KEY && !goingLeft) {
+            dx = 10;
+            dy = 0;
+        }
+        if (keyPressed === DOWN_KEY && !goingUp) {
+            dx = 0;
+            dy = 10;
+        }
+    }
+
+</script>
+</html>
